@@ -1,0 +1,39 @@
+/* src/App.css */
+
+#root {
+  display: flex;
+  justify-content: center; /* 가로 중앙 정렬 */
+  align-items: center;   /* 세로 중앙 정렬 */
+  min-height: 100vh;     /* 최소 높이를 화면 전체 높이로 설정 */
+  width: 100%;
+}
+
+.container {
+  max-width: 400px;
+  margin: 50px auto;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  text-align: center;
+}
+.form-group {
+  margin-bottom: 15px;
+}
+label {
+  display: block;
+  margin-bottom: 5px;
+}
+input {
+  width: 100%;
+  padding: 8px;
+  box-sizing: border-box;
+}
+button {
+  width: 100%;
+  padding: 10px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
