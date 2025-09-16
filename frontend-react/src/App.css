@@ -37,3 +37,19 @@ button {
   border-radius: 4px;
   cursor: pointer;
 }
+/* --- 대시보드 그리드 레이아웃 --- */
+.dashboard-layout {
+  display: grid;
+  /* 2개의 동일한 너비의 컬럼을 만듭니다 */
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px; /* 아이템 사이의 간격 */
+  align-items: start; /* 아이템들을 위쪽으로 정렬 */
+}
+
+/* --- 식단 목록 그리드 레이아웃 --- */
+.meal-grid {
+  display: grid;
+  /* 2개의 동일한 너비의 컬럼을 만듭니다 */
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px; /* 아이템 사이의 간격 */
+}

@@ -2,8 +2,48 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProfileSetup from './ProfileSetup';
-import '../App.css';
 import apiFetch from '../apiClient';
+import '../App.css';
+
+// MealList, MealItem, EditForm 컴포넌트는 UI 렌더링만 담당하도록 분리
+const MealList = ({ title, meals, ...props }) => (
+    <div className="container">
+        <h3>{title}</h3>
+        <ul>
+            {meals && meals.length > 0 ? (
+                meals.map(meal => (
+                    <li key={meal.id}>
+                        {props.editingMealId === meal.id ? (
+                            <EditForm meal={meal} {...props} />
+                        ) : (
+                            <MealItem meal={meal} {...props} />
+                        )}
+                    </li>
+                ))
+            ) : (
+                <li>기록 없음</li>
+            )}
+        </ul>
+    </div>
+);
+
+const MealItem = ({ meal, onEdit, onDelete }) => (
+    <div>
+        {meal.food_name} - {meal.calories} kcal
+        <button onClick={() => onEdit(meal)}>수정</button>
+        <button onClick={() => onDelete(meal.id)}>삭제</button>
+    </div>
+);
+
+const EditForm = ({ meal, onUpdate, onCancelEdit, editedFoodName, setEditedFoodName, editedCalories, setEditedCalories }) => (
+    <div>
+        <input type="text" value={editedFoodName} onChange={(e) => setEditedFoodName(e.target.value)} />
+        <input type="number" value={editedCalories} onChange={(e) => setEditedCalories(e.target.value)} />
+        <button onClick={() => onUpdate(meal.id)}>저장</button>
+        <button onClick={onCancelEdit}>취소</button>
+    </div>
+);
+
 
 function Dashboard() {
     const navigate = useNavigate();
@@ -11,156 +51,104 @@ function Dashboard() {
     const [loading, setLoading] = useState(true);
     const [foodName, setFoodName] = useState('');
     const [calories, setCalories] = useState('');
-
-    // --- 수정 기능을 위한 state 추가 ---
-    const [editingMealId, setEditingMealId] = useState(null); // 현재 수정 중인 항목의 id
+    const [mealType, setMealType] = useState('lunch');
+    const [editingMealId, setEditingMealId] = useState(null);
     const [editedFoodName, setEditedFoodName] = useState('');
     const [editedCalories, setEditedCalories] = useState('');
 
     const fetchDashboardData = async () => {
         try {
-        // fetch를 apiFetch로 변경
-        const response = await apiFetch('/api/dashboard');
-        if (response.ok) {
-            const data = await response.json();
-            setDashboardData(data);
-        } else {
-            setDashboardData(null);
-        }
+            const response = await apiFetch('/api/dashboard');
+            if (response.ok) setDashboardData(await response.json());
+            else setDashboardData(null);
         } catch (error) {
-        // 401 에러는 apiClient에서 처리하므로 여기서는 다른 네트워크 에러만 잡힙니다.
-        console.error("Dashboard data fetch error:", error);
+            console.error("Dashboard data fetch error:", error);
         }
         setLoading(false);
     };
 
-    useEffect(() => {
-        fetchDashboardData();
-    }, []);
+    useEffect(() => { fetchDashboardData(); }, []);
 
-    const handleLogout = () => {
-        localStorage.removeItem('token');
-        navigate('/login');
-    };
+    const handleLogout = () => { localStorage.removeItem('token'); navigate('/login'); };
 
     const handleMealSubmit = async (event) => {
         event.preventDefault();
         try {
-        const response = await apiFetch('/api/meals', {
-            method: 'POST',
-            body: JSON.stringify({ food_name: foodName, calories: parseInt(calories) })
-        });
-
-        if (response.ok) {
-            setFoodName('');
-            setCalories('');
+            await apiFetch('/api/meals', {
+                method: 'POST',
+                body: JSON.stringify({ food_name: foodName, calories: parseInt(calories), meal_type: mealType })
+            });
+            setFoodName(''); setCalories('');
             fetchDashboardData();
-        } else {
-            const result = await response.json();
-            alert(result.error || '식단 기록에 실패했습니다.');
-        }
-        } catch (error) {
-        console.error("Meal submit error:", error);
-        }
+        } catch (error) { console.error("Meal submit error:", error); alert('식단 기록에 실패했습니다.'); }
     };
 
-  // --- 삭제 처리 함수 추가 ---
     const handleDelete = async (mealId) => {
         if (window.confirm('정말로 이 항목을 삭제하시겠습니까?')) {
             try {
-                const response = await apiFetch(`/api/meals/${mealId}`, { method: 'DELETE' });
-                if (response.ok) {
-                    fetchDashboardData(); // 삭제 성공 후 목록 새로고침
-                } else {
-                    alert('삭제에 실패했습니다.');
-                }
-            } catch (error) {
-                console.error("Delete error:", error);
-            }
+                await apiFetch(`/api/meals/${mealId}`, { method: 'DELETE' });
+                fetchDashboardData();
+            } catch (error) { console.error("Delete error:", error); alert('삭제에 실패했습니다.');}
         }
     };
 
-    // --- 수정 모드 시작 함수 추가 ---
     const handleEdit = (meal) => {
         setEditingMealId(meal.id);
         setEditedFoodName(meal.food_name);
         setEditedCalories(meal.calories);
     };
-
-    // --- 수정 완료 처리 함수 추가 ---
+    
     const handleUpdate = async (mealId) => {
         try {
-            const response = await apiFetch(`/api/meals/${mealId}`, {
+            await apiFetch(`/api/meals/${mealId}`, {
                 method: 'PUT',
                 body: JSON.stringify({ food_name: editedFoodName, calories: parseInt(editedCalories) })
             });
-            if (response.ok) {
-                setEditingMealId(null); // 수정 모드 종료
-                fetchDashboardData(); // 수정 성공 후 목록 새로고침
-            } else {
-                alert('수정에 실패했습니다.');
-            }
-        } catch (error) {
-            console.error("Update error:", error);
-        }
+            setEditingMealId(null);
+            fetchDashboardData();
+        } catch (error) { console.error("Update error:", error); alert('수정에 실패했습니다.'); }
     };
 
     if (loading) return <div>로딩 중...</div>;
     if (!dashboardData) return <ProfileSetup onProfileUpdate={fetchDashboardData} />;
 
-    const { profile, recommended_calories, total_calories_today, meals_today, bmr, bmi } = dashboardData;
+    // ----- 여기가 핵심 수정 사항입니다 -----
+    // dashboardData에서 값을 추출할 때, 혹시 값이 없을 경우를 대비해 기본값을 설정합니다.
+    const { profile, recommended_calories, total_calories_today, bmr, bmi, meals_by_type = {} } = dashboardData;
+    const { breakfast = [], lunch = [], dinner = [], snack = [] } = meals_by_type;
 
     return (
-        <div>
-            <div className="container">
-                <h2>{profile.name}님의 대시보드 ({profile.goal} 목표)</h2>
-                <p>기초대사량(BMR): <strong>{bmr} kcal</strong></p>
-                <p>체질량지수(BMI): <strong>{bmi}</strong></p>
-                <p>오늘 섭취 칼로리: <strong>{total_calories_today} / {recommended_calories} kcal</strong></p>
-                <button onClick={handleLogout}>로그아웃</button>
+        // --- 여기가 수정되었습니다 ---
+        <div className="dashboard-layout">
+            {/* 왼쪽 컬럼 */}
+            <div className="grid-column">
+                <div className="container">
+                    <h2>{profile.name}님의 대시보드 ({profile.goal} 목표)</h2>
+                    <p>기초대사량(BMR): <strong>{bmr} kcal</strong> | 체질량지수(BMI): <strong>{bmi}</strong></p>
+                    <p>오늘 섭취 칼로리: <strong>{total_calories_today} / {recommended_calories} kcal</strong></p>
+                    <button onClick={handleLogout} className="logout-btn">로그아웃</button>
+                </div>
+
+                <div className="container">
+                    <h3>식단 기록하기</h3>
+                    <form onSubmit={handleMealSubmit}>
+                        <div className="form-group"><label>식사 유형:</label><select value={mealType} onChange={e => setMealType(e.target.value)}><option value="breakfast">아침</option><option value="lunch">점심</option><option value="dinner">저녁</option><option value="snack">간식</option></select></div>
+                        <div className="form-group"><label>음식 이름:</label><input type="text" value={foodName} onChange={e => setFoodName(e.target.value)} required /></div>
+                        <div className="form-group"><label>칼로리 (kcal):</label><input type="number" value={calories} onChange={e => setCalories(e.target.value)} required /></div>
+                        <button type="submit">기록하기</button>
+                    </form>
+                </div>
             </div>
 
-            <div className="container">
-                <h3>식단 기록하기</h3>
-                <form onSubmit={handleMealSubmit}>
-                    <div className="form-group">
-                        <label>음식 이름:</label>
-                        <input type="text" value={foodName} onChange={e => setFoodName(e.target.value)} required />
-                    </div>
-                    <div className="form-group">
-                        <label>칼로리 (kcal):</label>
-                        <input type="number" value={calories} onChange={e => setCalories(e.target.value)} required />
-                    </div>
-                    <button type="submit">기록하기</button>
-                </form>
-            </div>
-
-              <div className="container">
-                <h3>오늘의 식단 기록</h3>
-                <ul>
-                    {meals_today.map((meal) => (
-                        <li key={meal.id}>
-                            {editingMealId === meal.id ? (
-                                // ----- 수정 모드일 때 UI -----
-                                <div>
-                                    <input type="text" value={editedFoodName} onChange={(e) => setEditedFoodName(e.target.value)} />
-                                    <input type="number" value={editedCalories} onChange={(e) => setEditedCalories(e.target.value)} />
-                                    <button onClick={() => handleUpdate(meal.id)}>저장</button>
-                                    <button onClick={() => setEditingMealId(null)}>취소</button>
-                                </div>
-                            ) : (
-                                // ----- 일반 모드일 때 UI -----
-                                <div>
-                                    {meal.food_name} - {meal.calories} kcal
-                                    <button onClick={() => handleEdit(meal)}>수정</button>
-                                    <button onClick={() => handleDelete(meal.id)}>삭제</button>
-                                </div>
-                            )}
-                        </li>
-                    ))}
-                </ul>
+            {/* 오른쪽 컬럼 */}
+            <div className="meal-grid">
+                <MealList title="아침 식사" meals={breakfast} onEdit={handleEdit} onDelete={handleDelete} onUpdate={handleUpdate} onCancelEdit={() => setEditingMealId(null)} editingMealId={editingMealId} editedFoodName={editedFoodName} setEditedFoodName={setEditedFoodName} editedCalories={editedCalories} setEditedCalories={setEditedCalories} />
+                <MealList title="점심 식사" meals={lunch} onEdit={handleEdit} onDelete={handleDelete} onUpdate={handleUpdate} onCancelEdit={() => setEditingMealId(null)} editingMealId={editingMealId} editedFoodName={editedFoodName} setEditedFoodName={setEditedFoodName} editedCalories={editedCalories} setEditedCalories={setEditedCalories} />
+                <MealList title="저녁 식사" meals={dinner} onEdit={handleEdit} onDelete={handleDelete} onUpdate={handleUpdate} onCancelEdit={() => setEditingMealId(null)} editingMealId={editingMealId} editedFoodName={editedFoodName} setEditedFoodName={setEditedFoodName} editedCalories={editedCalories} setEditedCalories={setEditedCalories} />
+                <MealList title="간식" meals={snack} onEdit={handleEdit} onDelete={handleDelete} onUpdate={handleUpdate} onCancelEdit={() => setEditingMealId(null)} editingMealId={editingMealId} editedFoodName={editedFoodName} setEditedFoodName={setEditedFoodName} editedCalories={editedCalories} setEditedCalories={setEditedCalories} />
             </div>
         </div>
     );
 }
+
 export default Dashboard;

@@ -133,10 +133,11 @@ def handle_meals():
             data = request.get_json()
             food_name = data.get('food_name')
             calories = data.get('calories')
+            meal_type = data.get('meal_type') # meal_type 받아오기 추가
 
             with conn.cursor() as cursor:
-                sql = "INSERT INTO meals (user_id, food_name, calories) VALUES (%s, %s, %s)"
-                cursor.execute(sql, (user_id, food_name, calories))
+                sql = "INSERT INTO meals (user_id, food_name, calories, meal_type) VALUES (%s, %s, %s, %s)"
+                cursor.execute(sql, (user_id, food_name, calories, meal_type))
             conn.commit()
             return jsonify({'message': '식단이 성공적으로 기록되었습니다.'}), 201
 
@@ -222,54 +223,57 @@ def get_dashboard_data():
                 return jsonify({'error': '프로필이 완성되지 않았습니다.'}), 404
             dashboard_data['profile'] = profile
 
-            # 2. 일일 권장 칼로리 계산
-            # BMR 계산 
+            # 2. BMR, TDEE, BMI 계산
+            # DB에서 가져온 Decimal 타입을 float으로 명시적으로 변환합니다.
             age = profile['age']
             weight = float(profile['weight'])
             height = float(profile['height'])
 
             if profile['gender'] == 'male':
                 bmr = 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age)
-            else: # female
+            else:
                 bmr = 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age)
 
-            # TDEE (활동대사량) 계산, 활동 수준은 1.375(가벼운 활동)으로 고정
-            # tdee = bmr * 1.375
-
-            # --- BMI 계산 추가 ---
+            tdee = bmr * 1.375
             height_in_meters = height / 100
             bmi = weight / (height_in_meters ** 2)
 
-            # --- 응답 데이터에 bmr, bmi 추가 ---
             dashboard_data['bmr'] = round(bmr)
             dashboard_data['bmi'] = round(bmi, 2)
 
             goal = profile['goal']
             if goal == '다이어트':
-                recommended_calories = bmr - 300 # 유지 칼로리에서 500kcal 감량
+                recommended_calories = tdee - 500
             elif goal == '근성장':
-                recommended_calories = bmr + 300 # 유지 칼로리에서 300kcal 증량
-            else: # 건강유지
-                recommended_calories = bmr
+                recommended_calories = tdee + 300
+            else:
+                recommended_calories = tdee
             dashboard_data['recommended_calories'] = round(recommended_calories)
 
             # 3. 오늘 섭취한 총 칼로리 및 식단 목록 가져오기
-            sql = "SELECT id, food_name, calories, created_at FROM meals WHERE user_id = %s AND DATE(created_at) = CURDATE() ORDER BY created_at DESC"
+            sql = "SELECT id, food_name, calories, meal_type, created_at FROM meals WHERE user_id = %s AND DATE(created_at) = CURDATE() ORDER BY created_at DESC"
             cursor.execute(sql, (user_id,))
             meals_today = cursor.fetchall()
 
             total_calories_today = sum(meal['calories'] for meal in meals_today)
 
+            meals_by_type = { 'breakfast': [], 'lunch': [], 'dinner': [], 'snack': [] }
             for meal in meals_today:
                 meal['created_at'] = meal['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+                if meal['meal_type'] and meal['meal_type'] in meals_by_type:
+                    meals_by_type[meal['meal_type']].append(meal)
 
-            dashboard_data['meals_today'] = meals_today
+            dashboard_data['meals_by_type'] = meals_by_type
             dashboard_data['total_calories_today'] = total_calories_today
 
         return jsonify(dashboard_data), 200
 
     except (jwt.ExpiredSignatureError, jwt.InvalidTokenError) as e:
         return jsonify({'error': str(e)}), 401
+    except Exception as e:
+        # 모든 예외를 잡아서 로그에 출력하고, 클라이언트에게는 일반적인 에러 메시지를 보냅니다.
+        print(f"An error occurred: {e}") # 터미널에 실제 에러 출력
+        return jsonify({'error': '서버 내부 오류가 발생했습니다.'}), 500
     finally:
         if conn:
             conn.close()
