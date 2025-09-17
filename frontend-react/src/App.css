@@ -53,3 +53,30 @@ button {
   grid-template-columns: repeat(2, 1fr);
   gap: 20px; /* 아이템 사이의 간격 */
 }
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 0 5px; /* 버튼과 컨테이너 가장자리 사이의 여백을 살짝 줄여 더 넓어보이게 함 */
+}
+
+.dashboard-header h1 {
+  margin: 0 10px; /* 화살표와 날짜 사이의 최소한의 여백 */
+  font-size: 18px; /* 글자 크기를 줄여 한 줄에 표시되도록 조정 */
+  white-space: nowrap; /* 화면이 좁아져도 줄바꿈이 되지 않도록 설정 */
+}
+
+.dashboard-header button {
+  background: none;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  color: #ccc;
+}
+
+.dashboard-header button:hover {
+  color: #333;
+}
+

@@ -49,6 +49,9 @@ function Dashboard() {
     const navigate = useNavigate();
     const [dashboardData, setDashboardData] = useState(null);
     const [loading, setLoading] = useState(true);
+    // 날짜 관리를 위한 state 추가
+    const [selectedDate, setSelectedDate] = useState(new Date());
+    // 식단 관리를 위한 useState
     const [foodName, setFoodName] = useState('');
     const [calories, setCalories] = useState('');
     const [mealType, setMealType] = useState('lunch');
@@ -56,18 +59,43 @@ function Dashboard() {
     const [editedFoodName, setEditedFoodName] = useState('');
     const [editedCalories, setEditedCalories] = useState('');
 
-    const fetchDashboardData = async () => {
+    const fetchDashboardData = async (date) => {
+        setLoading(true);
+        // Date 객체를 'YYYY-MM-DD' 형식의 문자열로 변환
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const dateString = `${year}-${month}-${day}`;
+
         try {
-            const response = await apiFetch('/api/dashboard');
-            if (response.ok) setDashboardData(await response.json());
-            else setDashboardData(null);
+            const response = await apiFetch(`/api/dashboard?date=${dateString}`);
+            if (response.ok) {
+                setDashboardData(await response.json());
+            } else {
+                setDashboardData(null);
+            }
         } catch (error) {
             console.error("Dashboard data fetch error:", error);
+            setDashboardData(null);
         }
         setLoading(false);
     };
 
-    useEffect(() => { fetchDashboardData(); }, []);
+    useEffect(() => { 
+        fetchDashboardData(selectedDate); 
+    }, [selectedDate]);
+
+    const handlePrevDay = () => {
+        const newDate = new Date(selectedDate);
+        newDate.setDate(selectedDate.getDate() - 1);
+        setSelectedDate(newDate);
+    };
+
+    const handleNextDay = () => {
+        const newDate = new Date(selectedDate);
+        newDate.setDate(selectedDate.getDate() + 1);
+        setSelectedDate(newDate);
+    };    
 
     const handleLogout = () => { localStorage.removeItem('token'); navigate('/login'); };
 
@@ -110,12 +138,13 @@ function Dashboard() {
     };
 
     if (loading) return <div>로딩 중...</div>;
-    if (!dashboardData) return <ProfileSetup onProfileUpdate={fetchDashboardData} />;
+    if (!dashboardData) return <ProfileSetup onProfileUpdate={() => fetchDashboardData(selectedDate)} />;
 
     // ----- 여기가 핵심 수정 사항입니다 -----
     // dashboardData에서 값을 추출할 때, 혹시 값이 없을 경우를 대비해 기본값을 설정합니다.
     const { profile, recommended_calories, total_calories_today, bmr, bmi, meals_by_type = {} } = dashboardData;
     const { breakfast = [], lunch = [], dinner = [], snack = [] } = meals_by_type;
+    const dateString = selectedDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
 
     return (
         // --- 여기가 수정되었습니다 ---
@@ -123,9 +152,15 @@ function Dashboard() {
             {/* 왼쪽 컬럼 */}
             <div className="grid-column">
                 <div className="container">
+                    <div className="dashboard-header">
+                        <button onClick={handlePrevDay}>&lt;</button>
+                        <h1>{dateString}</h1>
+                        <button onClick={handleNextDay}>&gt;</button>
+                    </div>
                     <h2>{profile.name}님의 대시보드 ({profile.goal} 목표)</h2>
-                    <p>기초대사량(BMR): <strong>{bmr} kcal</strong> | 체질량지수(BMI): <strong>{bmi}</strong></p>
-                    <p>오늘 섭취 칼로리: <strong>{total_calories_today} / {recommended_calories} kcal</strong></p>
+                    <p>기초대사량(BMR): <strong>{bmr} kcal</strong> </p>
+                    <p>체질량지수(BMI): <strong>{bmi} ({dashboardData.bmi_category})</strong></p>
+                    <p>섭취 칼로리: <strong>{total_calories_today} / {recommended_calories} kcal</strong></p>
                     <button onClick={handleLogout} className="logout-btn">로그아웃</button>
                 </div>
 
