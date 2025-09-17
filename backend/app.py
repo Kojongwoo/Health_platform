@@ -201,6 +201,9 @@ def handle_profile():
 
 @app.route('/api/dashboard', methods=['GET'])
 def get_dashboard_data():
+
+    target_date_str = request.args.get('date', datetime.utcnow().strftime('%Y-%m-%d'))
+
     auth_header = request.headers.get('Authorization')
     if not auth_header:
         return jsonify({'error': '토큰이 필요합니다'}), 403
@@ -235,11 +238,25 @@ def get_dashboard_data():
                 bmr = 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age)
 
             tdee = bmr * 1.375
+
             height_in_meters = height / 100
             bmi = weight / (height_in_meters ** 2)
 
             dashboard_data['bmr'] = round(bmr)
             dashboard_data['bmi'] = round(bmi, 2)
+
+            # BMI 수치에 따른 분류 로직
+            bmi_category = ''
+            if bmi < 18.5:
+                bmi_category = '저체중'
+            elif 18.5 <= bmi < 25:
+                bmi_category = '정상'
+            elif 25 <= bmi < 30:
+                bmi_category = '과체중'
+            else:
+                bmi_category = '비만'
+
+            dashboard_data['bmi_category'] = bmi_category
 
             goal = profile['goal']
             if goal == '다이어트':
@@ -251,8 +268,8 @@ def get_dashboard_data():
             dashboard_data['recommended_calories'] = round(recommended_calories)
 
             # 3. 오늘 섭취한 총 칼로리 및 식단 목록 가져오기
-            sql = "SELECT id, food_name, calories, meal_type, created_at FROM meals WHERE user_id = %s AND DATE(created_at) = CURDATE() ORDER BY created_at DESC"
-            cursor.execute(sql, (user_id,))
+            sql = "SELECT id, food_name, calories, meal_type, created_at FROM meals WHERE user_id = %s AND DATE(created_at) = %s ORDER BY created_at DESC"
+            cursor.execute(sql, (user_id, target_date_str))
             meals_today = cursor.fetchall()
 
             total_calories_today = sum(meal['calories'] for meal in meals_today)
