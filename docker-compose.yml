@@ -1,0 +1,41 @@
+# docker-compose.yml
+
+version: '3.8'
+
+services:
+  # 1. 데이터베이스 서비스
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: 'root' # 노트북 DB 비밀번호
+      MYSQL_DATABASE: 'health_db'
+    ports:
+      - "3306:3306" # 노트북의 3306 포트와 연결
+    volumes:
+      - db_data:/var/lib/mysql
+
+  # 2. 백엔드 서비스
+  backend:
+    build: ./backend # ./backend 폴더의 Dockerfile을 사용
+    ports:
+      - "5000:5000"
+    environment:
+      # app.py에서 이 환경 변수를 사용하도록 수정하면 더 좋습니다.
+      DB_HOST: 'db'
+      DB_USER: 'root'
+      DB_PASSWORD: 'root'
+      DB_NAME: 'health_db'
+    depends_on:
+      - db # db 서비스가 실행된 후에 backend 실행
+
+  # 3. 프론트엔드 서비스
+  frontend:
+    build:
+      context: ./frontend-react
+    ports:
+      - "5173:80" # 노트북의 5173 포트와 Nginx 80 포트 연결
+    depends_on:
+      - backend # backend 서비스가 실행된 후에 frontend 실행
+
+volumes:
+  db_data:

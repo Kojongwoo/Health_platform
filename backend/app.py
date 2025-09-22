@@ -1,3 +1,5 @@
+#  .\venv\Scripts\activate 가상환경 활성화
+
 from flask import Flask, request, jsonify
 from datetime import datetime, timedelta
 import jwt
@@ -134,10 +136,11 @@ def handle_meals():
             food_name = data.get('food_name')
             calories = data.get('calories')
             meal_type = data.get('meal_type') # meal_type 받아오기 추가
+            date = data.get('date')  # 클라이언트에서 날짜를 받아옵니다.
 
             with conn.cursor() as cursor:
-                sql = "INSERT INTO meals (user_id, food_name, calories, meal_type) VALUES (%s, %s, %s, %s)"
-                cursor.execute(sql, (user_id, food_name, calories, meal_type))
+                sql = "INSERT INTO meals (user_id, food_name, calories, meal_type, created_at) VALUES (%s, %s, %s, %s, %s)"
+                cursor.execute(sql, (user_id, food_name, calories, meal_type, date))
             conn.commit()
             return jsonify({'message': '식단이 성공적으로 기록되었습니다.'}), 201
 

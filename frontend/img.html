@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>시스템 구성도</title>
+    <style>
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+        }
+        canvas {
+            border: 1px solid #ddd;
+            background-color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="architectureCanvas" width="800" height="400"></canvas>
+    <script>
+        const canvas = document.getElementById('architectureCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Helper function to draw a box with text
+        function drawBox(x, y, width, height, title, tech, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, width, height);
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x, y, width, height);
+
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 16px Malgun Gothic';
+            ctx.textAlign = 'center';
+            ctx.fillText(title, x + width / 2, y + 35);
+
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '14px Malgun Gothic';
+            ctx.fillText(tech, x + width / 2, y + 60);
+        }
+
+        // Helper function to draw an arrow with text
+        function drawArrow(startX, startY, endX, endY, text) {
+            const headlen = 10; // length of head in pixels
+            const angle = Math.atan2(endY - startY, endX - startX);
+
+            // Arrow line
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(endX, endY);
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Arrow head
+            ctx.beginPath();
+            ctx.moveTo(endX, endY);
+            ctx.lineTo(endX - headlen * Math.cos(angle - Math.PI / 6), endY - headlen * Math.sin(angle - Math.PI / 6));
+            ctx.lineTo(endX - headlen * Math.cos(angle + Math.PI / 6), endY - headlen * Math.sin(angle + Math.PI / 6));
+            ctx.closePath();
+            ctx.fillStyle = '#333';
+            ctx.fill();
+            
+            // Text
+            ctx.fillStyle = '#333';
+            ctx.font = '12px Malgun Gothic';
+            ctx.textAlign = 'center';
+            ctx.save();
+            ctx.translate((startX + endX) / 2, (startY + endY) / 2);
+            ctx.fillText(text, 0, -10);
+            ctx.restore();
+        }
+
+        // --- Draw components ---
+        const boxWidth = 150;
+        const boxHeight = 100;
+        const boxY = canvas.height / 2 - boxHeight / 2;
+        const gap = 50;
+
+        const userX = 30;
+        const frontendX = userX + boxWidth + gap;
+        const backendX = frontendX + boxWidth + gap;
+        const dbX = backendX + boxWidth + gap;
+
+        // 1. User (웹 브라우저)
+        drawBox(userX, boxY, boxWidth, boxHeight, '사용자', '(Web Browser)', '#2980b9');
+        
+        // 2. Frontend (React)
+        drawBox(frontendX, boxY, boxWidth, boxHeight, '프론트엔드', 'React', '#27ae60');
+
+        // 3. Backend (Python/Flask)
+        drawBox(backendX, boxY, boxWidth, boxHeight, '백엔드 (API 서버)', 'Python / Flask', '#f39c12');
+        
+        // 4. Database (MySQL)
+        drawBox(dbX, boxY, boxWidth, boxHeight, '데이터베이스', 'MySQL', '#c0392b');
+
+
+        // --- Draw arrows and connections ---
+        const arrowY = canvas.height / 2;
+        
+        // User -> Frontend (HTTP 요청/응답)
+        drawArrow(userX + boxWidth, arrowY, frontendX, arrowY, 'HTTP Request / UI');
+
+        // Frontend -> Backend (REST API)
+        drawArrow(frontendX + boxWidth, arrowY, backendX, arrowY, 'REST API (JSON)');
+        
+        // Backend -> Database (SQL Query)
+        drawArrow(backendX + boxWidth, arrowY, dbX, arrowY, 'SQL Query');
+    </script>
+</body>
+</html>

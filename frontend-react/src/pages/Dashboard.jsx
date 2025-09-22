@@ -101,13 +101,21 @@ function Dashboard() {
 
     const handleMealSubmit = async (event) => {
         event.preventDefault();
+
+        const dateString = selectedDate.toISOString().split('T')[0]; // 'YYYY-MM-DD' 형식
+
         try {
             await apiFetch('/api/meals', {
                 method: 'POST',
-                body: JSON.stringify({ food_name: foodName, calories: parseInt(calories), meal_type: mealType })
+                body: JSON.stringify({ 
+                    food_name: foodName, 
+                    calories: parseInt(calories), 
+                    meal_type: mealType,
+                    date: dateString  // 선택된 날짜를 함께 전송
+                })
             });
             setFoodName(''); setCalories('');
-            fetchDashboardData();
+            fetchDashboardData(selectedDate);
         } catch (error) { console.error("Meal submit error:", error); alert('식단 기록에 실패했습니다.'); }
     };
 
@@ -115,7 +123,7 @@ function Dashboard() {
         if (window.confirm('정말로 이 항목을 삭제하시겠습니까?')) {
             try {
                 await apiFetch(`/api/meals/${mealId}`, { method: 'DELETE' });
-                fetchDashboardData();
+                fetchDashboardData(selectedDate);
             } catch (error) { console.error("Delete error:", error); alert('삭제에 실패했습니다.');}
         }
     };
@@ -133,7 +141,7 @@ function Dashboard() {
                 body: JSON.stringify({ food_name: editedFoodName, calories: parseInt(editedCalories) })
             });
             setEditingMealId(null);
-            fetchDashboardData();
+            fetchDashboardData(selectedDate);
         } catch (error) { console.error("Update error:", error); alert('수정에 실패했습니다.'); }
     };
 
