@@ -99,10 +99,6 @@ def login():
     finally:
         conn.close()
 
-# backend/app.py
-
-# backend/app.py
-
 @app.route('/api/meals', methods=['GET', 'POST'])
 def handle_meals():
     # 요청 헤더에서 토큰 가져오기
