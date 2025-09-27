@@ -1,19 +1,17 @@
 from flask import Blueprint, request, jsonify
-
 import jwt
 from .. import get_db_connection, app # DB 커넥션과 app 설정 가져오기
+from ..decorators import token_required
+from flask import g
 
 meals_bp = Blueprint('meals_bp', __name__)
 
 @meals_bp.route('/api/meals', methods=['POST'])
+@token_required
 def handle_meals_post():
-    auth_header = request.headers.get('Authorization')
-    if not auth_header: return jsonify({'error': '토큰이 필요합니다'}), 403
-    token = auth_header.split(' ')[1]
+    user_id = g.user_id
     conn = None
     try:
-        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
-        user_id = payload['user_id']
         conn = get_db_connection()
         data = request.get_json()
         sql = """
@@ -33,14 +31,11 @@ def handle_meals_post():
             conn.close()
 
 @meals_bp.route('/api/meals/<int:meal_id>', methods=['PUT', 'DELETE'])
+@token_required
 def handle_meal_item(meal_id):
-    auth_header = request.headers.get('Authorization')
-    if not auth_header: return jsonify({'error': '토큰이 필요합니다'}), 403
-    token = auth_header.split(' ')[1]
+    user_id = g.user_id
     conn = None
     try:
-        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
-        user_id = payload['user_id']
         conn = get_db_connection()
         with conn.cursor() as cursor:
             sql = "SELECT user_id FROM meals WHERE id = %s"

@@ -1,19 +1,18 @@
 from flask import Blueprint, request, jsonify
-import jwt
 from .. import get_db_connection, app # DB 커넥션과 app 설정 가져오기
+from ..decorators import token_required
+from flask import g
 
 profile_bp = Blueprint('profile_bp', __name__)
 
 @profile_bp.route('/api/profile', methods=['GET', 'POST'])
+@token_required
 def handle_profile():
-    auth_header = request.headers.get('Authorization')
-    if not auth_header:
-        return jsonify({'error': '토큰이 필요합니다'}), 403
-    token = auth_header.split(' ')[1]
+
+    user_id = g.user_id
+
     conn = None
     try:
-        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
-        user_id = payload['user_id']
         conn = get_db_connection()
         if request.method == 'GET':
             with conn.cursor() as cursor:
