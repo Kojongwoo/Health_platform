@@ -80,3 +80,30 @@ button {
   color: #333;
 }
 
+.exercise-card {
+  background-color: #ffffff; 
+  border: 1px solid #ddd;     
+  border-radius: 8px;        
+  padding: 12px;            
+  margin-bottom: 20px;      
+  text-align: left;           
+  color: #333;               
+}
+
+.exercise-card .exercise-image {
+  display: block;             
+  margin: 0 auto;             
+  width: 100%;
+  max-width: 400px;        
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+
+.exercise-card h3 {
+  margin-top: 0;
+  color: #000; /* 제목 색상을 더 진하게 */
+}
+
+.exercise-card p {
+   margin-bottom: 0; /* 단락 아래쪽 여백 제거 */
+}

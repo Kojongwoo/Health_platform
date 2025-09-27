@@ -2,10 +2,15 @@
 from flask import Flask
 from flask_cors import CORS
 import pymysql
+import os
+from dotenv import load_dotenv
+
+load_dotenv()  # .env 파일에서 환경 변수 로드
 
 # Flask 앱 생성 및 설정
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'jongheohuhwoojong_0312'
+# os.getenv()를 사용하여 환경 변수에서 값을 가져옵니다.
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 CORS(app)
 
 # --- 데이터베이스 연결 설정 ---

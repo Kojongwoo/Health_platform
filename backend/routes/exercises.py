@@ -29,7 +29,7 @@ def recommend_exercises():
             level = user['level']
             
             params = [level]
-            query = "SELECT id, name, description FROM exercises WHERE level = %s"
+            query = "SELECT id, name, description, image_url, instructions FROM exercises WHERE level = %s"
             reason = f"{user['name']}님은 '{level}' 수준에 맞춰 운동을 추천합니다."
 
             if goal == '다이어트':
