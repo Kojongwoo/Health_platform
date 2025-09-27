@@ -1,5 +1,4 @@
 #  .\venv\Scripts\activate 가상환경 활성화
-
 from flask import Flask, request, jsonify
 from datetime import datetime, timedelta
 import jwt
@@ -180,14 +179,15 @@ def handle_profile():
             weight = data.get('weight')
             goal = data.get('goal')
             age = data.get('age')
+            level = data.get('level')
 
             with conn.cursor() as cursor:
                 sql = """
                     UPDATE users 
-                    SET gender = %s, height = %s, weight = %s, goal = %s, age = %s
+                    SET gender = %s, height = %s, weight = %s, goal = %s, age = %s, level = %s
                     WHERE id = %s
                 """
-                cursor.execute(sql, (gender, height, weight, goal, age, user_id))
+                cursor.execute(sql, (data.get('gender'), data.get('height'), data.get('weight'), data.get('goal'), data.get('age'), level, user_id))
             conn.commit()
             return jsonify({'message': '프로필이 성공적으로 업데이트되었습니다.'}), 200
 
@@ -209,6 +209,7 @@ def get_dashboard_data():
 
     token = auth_header.split(' ')[1]
     conn = None
+
     try:
         payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
         user_id = payload['user_id']
@@ -221,6 +222,7 @@ def get_dashboard_data():
             sql = "SELECT name, gender, height, weight, goal, age FROM users WHERE id = %s"
             cursor.execute(sql, (user_id,))
             profile = cursor.fetchone()
+
             if not profile or not profile['height']:
                 return jsonify({'error': '프로필이 완성되지 않았습니다.'}), 404
             dashboard_data['profile'] = profile
@@ -258,6 +260,8 @@ def get_dashboard_data():
             dashboard_data['bmi_category'] = bmi_category
 
             goal = profile['goal']
+
+            # 목표에 따른 권장 칼로리 계산
             if goal == '다이어트':
                 recommended_calories = tdee - 500
             elif goal == '근성장':
@@ -265,6 +269,8 @@ def get_dashboard_data():
             else:
                 recommended_calories = tdee
             dashboard_data['recommended_calories'] = round(recommended_calories)
+
+            
 
             # 3. 오늘 섭취한 총 칼로리 및 식단 목록 가져오기
             sql = "SELECT id, food_name, calories, meal_type, created_at FROM meals WHERE user_id = %s AND DATE(created_at) = %s ORDER BY created_at DESC"
@@ -337,6 +343,57 @@ def handle_meal_item(meal_id):
     finally:
         if conn:
             conn.close()
+
+@app.route('/api/exercises', methods=['GET'])
+def recommend_exercises():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header: return jsonify({'error': '토큰이 필요합니다'}), 403
+
+    token = auth_header.split(' ')[1]
+    conn = None
+    try:
+        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        user_id = payload['user_id']
+        conn = get_db_connection()
+
+        with conn.cursor() as cursor:
+            # 1. 추천에 필요한 모든 사용자 정보 조회
+            sql = "SELECT name, height, weight, goal, level FROM users WHERE id = %s"
+            cursor.execute(sql, (user_id,))
+            user = cursor.fetchone()
+            if not user or not user['level']:
+                return jsonify({'error': '프로필 정보(운동 수준)가 필요합니다.'}), 404
+
+            # 2. BMI 계산 및 추천 로직
+            height_m = float(user['height']) / 100
+            bmi = float(user['weight']) / (height_m ** 2)
+
+            goal = user['goal']
+            level = user['level']
+
+            params = [level]
+            query = "SELECT id, name, description FROM exercises WHERE level = %s"
+            reason = f"{user['name']}님은 '{level}' 수준에 맞춰 운동을 추천합니다."
+
+            if goal == '다이어트':
+                query += " AND type = 'cardio'"
+                if bmi >= 25: # BMI가 과체중 이상일 경우
+                    query += " AND impact = 'low'"
+                    reason = f"현재 BMI({round(bmi,1)})를 고려하여, 관절에 부담이 적은 유산소 운동을 추천합니다."
+            else: # 근성장 또는 건강유지
+                query += " AND type = 'strength'"
+                reason = f"'{goal}' 목표 달성을 위해 근력 운동을 추천합니다."
+
+            cursor.execute(query, tuple(params))
+            exercises = cursor.fetchall()
+
+        return jsonify({'recommendations': exercises, 'reason': reason}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if conn: conn.close()
+
 
 # --- 서버 실행 ---
 if __name__ == '__main__':

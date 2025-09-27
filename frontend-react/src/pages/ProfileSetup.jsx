@@ -10,6 +10,7 @@ function ProfileSetup({ onProfileUpdate }) {
   const [weight, setWeight] = useState('');
   const [goal, setGoal] = useState('다이어트');
   const [age, setAge] = useState('');
+  const [level, setLevel] = useState('beginner'); // New state for fitness level
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -20,7 +21,8 @@ function ProfileSetup({ onProfileUpdate }) {
       height: parseFloat(height), 
       weight: parseFloat(weight), 
       goal, 
-      age:parseInt(age) 
+      age:parseInt(age), 
+      level
     };
     
     try {
@@ -78,6 +80,16 @@ function ProfileSetup({ onProfileUpdate }) {
                 <option value="건강유지">건강유지</option>
             </select>
         </div>
+
+        <div className="form-group">
+            <label>운동 수준:</label>
+            <select value={level} onChange={e => setLevel(e.target.value)}>
+                <option value="beginner">초급</option>
+                <option value="intermediate">중급</option>
+                <option value="advanced">고급</option>
+            </select>
+        </div>
+
         <button type="submit">저장하기</button>
       </form>
     </div>
